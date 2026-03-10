@@ -32,15 +32,15 @@ export default function ChainsPage() {
         <p className="text-[13px] text-[#71717a]">
           {chains.length} chain{chains.length !== 1 ? 's' : ''} enabled across your gateway
         </p>
-        <div className="flex border border-[#27272a] rounded-lg overflow-hidden">
+        <div className="flex bg-[#111114] border border-[#1f1f23] rounded-lg p-0.5">
           {(['all', 'mainnet', 'testnet'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3.5 py-1.5 text-[12px] font-medium capitalize transition-colors ${
+              className={`px-3.5 py-1.5 text-[12px] font-medium capitalize rounded-md transition-all duration-200 ${
                 filter === f
-                  ? 'bg-white text-black'
-                  : 'text-[#71717a] hover:text-[#a1a1aa] bg-transparent'
+                  ? 'bg-white text-black shadow-sm'
+                  : 'text-[#71717a] hover:text-[#a1a1aa]'
               }`}
             >
               {f}
@@ -50,11 +50,11 @@ export default function ChainsPage() {
       </div>
 
       {/* Chain grid */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-4 stagger-children">
         {filtered.map((c) => (
           <div
             key={c.slug}
-            className="border border-[#1a1a1f] rounded-xl overflow-hidden hover:border-[#27272a] transition-colors"
+            className="bg-[#0c0c0f] border border-[#1a1a1f] rounded-xl overflow-hidden hover:border-[#27272a] transition-all duration-200 hover:shadow-lg hover:shadow-black/20"
           >
             {/* Card header */}
             <div className="px-5 h-14 flex items-center gap-3 border-b border-[#1a1a1f]">

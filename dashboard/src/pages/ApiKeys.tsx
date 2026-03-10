@@ -54,17 +54,17 @@ export default function ApiKeysPage() {
     return ws ? ws.name : wsId;
   };
 
-  const inputClass = "w-full px-4 py-2.5 bg-[#09090b] border border-[#27272a] rounded-lg text-[13px] text-white placeholder-[#3f3f46] focus:outline-none focus:border-[#52525b] transition-colors";
-  const selectClass = "w-full px-4 py-2.5 bg-[#09090b] border border-[#27272a] rounded-lg text-[13px] text-white focus:outline-none focus:border-[#52525b] transition-colors appearance-none";
+  const inputClass = "w-full px-4 py-2.5 bg-[#09090b] border border-[#1f1f23] rounded-lg text-[13px] text-white placeholder-[#3f3f46] focus:outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20 transition-all";
+  const selectClass = "w-full px-4 py-2.5 bg-[#09090b] border border-[#1f1f23] rounded-lg text-[13px] text-white focus:outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20 transition-all appearance-none";
 
   return (
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <p className="text-[13px] text-[#71717a]">Manage authentication keys for your applications</p>
+        <p className="text-[13px] text-[#71717a]">{keys.length} API key{keys.length !== 1 ? 's' : ''}</p>
         <button
           onClick={() => { setShowCreate(!showCreate); setNewKey(null); }}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-black text-[13px] font-medium rounded-lg hover:bg-[#e4e4e7] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-white text-black text-[13px] font-medium rounded-lg hover:bg-[#e4e4e7] transition-all duration-200 shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -102,9 +102,9 @@ export default function ApiKeysPage() {
 
       {/* Create form */}
       {showCreate && (
-        <div className="mb-6 border border-[#1a1a1f] rounded-xl overflow-hidden">
+        <div className="mb-6 border border-[#1a1a1f] rounded-xl overflow-hidden bg-[#0c0c0f] animate-fade-in">
           <div className="px-5 h-12 flex items-center border-b border-[#1a1a1f]">
-            <h3 className="text-[12px] font-medium text-[#a1a1aa]">New API Key</h3>
+            <h3 className="text-[12px] font-semibold text-[#a1a1aa]">New API Key</h3>
           </div>
           <div className="p-5">
             <div className="space-y-4">
@@ -173,17 +173,17 @@ export default function ApiKeysPage() {
       )}
 
       {/* Keys table */}
-      <div className="border border-[#1a1a1f] rounded-xl overflow-hidden">
+      <div className="border border-[#1a1a1f] rounded-xl overflow-hidden bg-[#0c0c0f]">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-[#1a1a1f]">
-              <th className="text-left px-5 h-12 text-[11px] font-medium uppercase tracking-wider text-[#52525b]">Name</th>
-              <th className="text-left px-5 h-12 text-[11px] font-medium uppercase tracking-wider text-[#52525b]">Key</th>
-              <th className="text-left px-5 h-12 text-[11px] font-medium uppercase tracking-wider text-[#52525b]">Workspace</th>
-              <th className="text-left px-5 h-12 text-[11px] font-medium uppercase tracking-wider text-[#52525b]">Rate Limit</th>
-              <th className="text-left px-5 h-12 text-[11px] font-medium uppercase tracking-wider text-[#52525b]">Networks</th>
-              <th className="text-left px-5 h-12 text-[11px] font-medium uppercase tracking-wider text-[#52525b]">Status</th>
-              <th className="text-right px-5 h-12 text-[11px] font-medium uppercase tracking-wider text-[#52525b]"></th>
+            <tr className="border-b border-[#1a1a1f] bg-[#0a0a0d]">
+              <th className="text-left px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[#52525b]">Name</th>
+              <th className="text-left px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[#52525b]">Key</th>
+              <th className="text-left px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[#52525b]">Workspace</th>
+              <th className="text-left px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[#52525b]">Rate Limit</th>
+              <th className="text-left px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[#52525b]">Networks</th>
+              <th className="text-left px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[#52525b]">Status</th>
+              <th className="text-right px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[#52525b]"></th>
             </tr>
           </thead>
           <tbody>
@@ -201,7 +201,7 @@ export default function ApiKeysPage() {
               </tr>
             ) : (
               keys.map((k) => (
-                <tr key={k.id} className="border-b border-[#1a1a1f] hover:bg-white/[0.02] transition-colors">
+                <tr key={k.id} className="border-b border-[#1a1a1f] table-row-hover">
                   <td className="px-5 py-4">
                     <span className="text-[13px] font-medium text-white">{k.name}</span>
                   </td>

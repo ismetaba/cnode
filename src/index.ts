@@ -3,7 +3,10 @@ import { config } from './config';
 import { rpcRoutes } from './routes/rpc';
 import { authRoutes } from './routes/auth';
 import { analyticsRoutes } from './routes/analytics';
-import { getEnabledChains, getAllChains } from './chains';
+import { roleRoutes } from './routes/role';
+import { operatorRoutes } from './routes/operator';
+import { getEnabledChains, getAllChains } from './services/chainManager';
+import { startHealthChecker } from './services/healthChecker';
 
 const app = Fastify({
   logger: {
@@ -23,7 +26,7 @@ app.addHook('onRequest', async (request, reply) => {
     'Access-Control-Allow-Headers',
     'Content-Type, X-API-Key, X-Admin-Secret'
   );
-  reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   if (request.method === 'OPTIONS') {
     reply.status(204).send();
   }
@@ -38,9 +41,11 @@ app.get('/health', async () => ({
 }));
 
 // Register routes
+app.register(roleRoutes);
 app.register(rpcRoutes);
 app.register(authRoutes);
 app.register(analyticsRoutes);
+app.register(operatorRoutes);
 
 // Start
 app.listen({ port: config.port, host: config.host }, (err, address) => {
@@ -50,4 +55,5 @@ app.listen({ port: config.port, host: config.host }, (err, address) => {
   }
   app.log.info(`CNode API Gateway running at ${address}`);
   app.log.info(`Enabled chains: ${getEnabledChains().map((c) => c.slug).join(', ')}`);
+  startHealthChecker();
 });

@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { config } from '../config';
+import { requireRole } from '../middleware/roleAuth';
 import {
   createApiKey,
   getAllApiKeys,
@@ -21,21 +21,8 @@ import {
   getKeysByWorkspace,
 } from '../services/workspaceManager';
 
-function requireAdmin(secret: string | undefined): boolean {
-  return secret === config.adminSecret;
-}
-
 export async function authRoutes(app: FastifyInstance): Promise<void> {
-  // All admin routes require the admin secret
-  app.addHook('preHandler', async (request, reply) => {
-    const secret = request.headers['x-admin-secret'] as string | undefined;
-    if (!requireAdmin(secret)) {
-      reply.status(401).send({
-        error: 'Unauthorized',
-        message: 'Invalid or missing X-Admin-Secret header',
-      });
-    }
-  });
+  app.addHook('preHandler', requireRole('consumer', 'operator'));
 
   // Create a new API key
   app.post<{

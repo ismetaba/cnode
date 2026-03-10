@@ -59,7 +59,7 @@ export default function WorkspacesPage() {
     setQuota(100000);
   };
 
-  const inputClass = "w-full px-4 py-2.5 bg-[#09090b] border border-[#27272a] rounded-lg text-[13px] text-white placeholder-[#3f3f46] focus:outline-none focus:border-[#52525b] transition-colors";
+  const inputClass = "w-full px-4 py-2.5 bg-[#09090b] border border-[#1f1f23] rounded-lg text-[13px] text-white placeholder-[#3f3f46] focus:outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20 transition-all";
 
   function quotaColor(used: number, limit: number) {
     const pct = (used / limit) * 100;
@@ -78,10 +78,10 @@ export default function WorkspacesPage() {
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <p className="text-[13px] text-[#71717a]">Organize API keys and manage monthly quotas</p>
+        <p className="text-[13px] text-[#71717a]">{workspaces.length} workspace{workspaces.length !== 1 ? 's' : ''}</p>
         <button
           onClick={() => { setShowCreate(!showCreate); setEditId(null); setName(''); setQuota(100000); }}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-black text-[13px] font-medium rounded-lg hover:bg-[#e4e4e7] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-white text-black text-[13px] font-medium rounded-lg hover:bg-[#e4e4e7] transition-all duration-200 shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -92,9 +92,9 @@ export default function WorkspacesPage() {
 
       {/* Create / Edit form */}
       {(showCreate || editId) && (
-        <div className="mb-6 border border-[#1a1a1f] rounded-xl overflow-hidden">
+        <div className="mb-6 border border-[#1a1a1f] rounded-xl overflow-hidden bg-[#0c0c0f] animate-fade-in">
           <div className="px-5 h-12 flex items-center border-b border-[#1a1a1f]">
-            <h3 className="text-[12px] font-medium text-[#a1a1aa]">
+            <h3 className="text-[12px] font-semibold text-[#a1a1aa]">
               {editId ? 'Edit Workspace' : 'New Workspace'}
             </h3>
           </div>
@@ -143,7 +143,7 @@ export default function WorkspacesPage() {
       )}
 
       {/* Workspace cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
         {workspaces.length === 0 ? (
           <div className="col-span-full border border-[#1a1a1f] rounded-xl px-5 py-16 text-center">
             <div className="flex flex-col items-center">
@@ -162,7 +162,7 @@ export default function WorkspacesPage() {
             const colors = quotaColor(used, limit);
 
             return (
-              <div key={ws.id} className="border border-[#1a1a1f] rounded-xl overflow-hidden hover:border-[#27272a] transition-colors">
+              <div key={ws.id} className="bg-[#0c0c0f] border border-[#1a1a1f] rounded-xl overflow-hidden hover:border-[#27272a] transition-all duration-200 hover:shadow-lg hover:shadow-black/20">
                 {/* Card header */}
                 <div className="px-5 h-12 flex items-center justify-between border-b border-[#1a1a1f]">
                   <div className="flex items-center gap-2">
@@ -199,11 +199,11 @@ export default function WorkspacesPage() {
 
                   {/* Stats row */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-[#0f0f12] rounded-lg px-3 py-2">
+                    <div className="bg-[#111114] rounded-lg px-3.5 py-2.5 border border-[#1a1a1f]">
                       <p className="text-[10px] text-[#52525b]">API Keys</p>
                       <p className="text-[15px] font-semibold text-white tabular-nums">{ws.key_count || 0}</p>
                     </div>
-                    <div className="bg-[#0f0f12] rounded-lg px-3 py-2">
+                    <div className="bg-[#111114] rounded-lg px-3.5 py-2.5 border border-[#1a1a1f]">
                       <p className="text-[10px] text-[#52525b]">Quota Left</p>
                       <p className="text-[15px] font-semibold text-white tabular-nums">{formatNumber(Math.max(0, limit - used))}</p>
                     </div>

@@ -77,3 +77,39 @@ if (hasWorkspaceCol === 0) {
     );
   `);
 }
+
+// === Migration: Add chains and health_checks tables ===
+db.exec(`
+  CREATE TABLE IF NOT EXISTS chains (
+    slug TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    chain_id INTEGER NOT NULL DEFAULT 0,
+    type TEXT NOT NULL DEFAULT 'evm',
+    rpc_url TEXT NOT NULL,
+    rpc_auth TEXT,
+    ws_url TEXT,
+    explorer_url TEXT,
+    currency_name TEXT NOT NULL DEFAULT 'Ether',
+    currency_symbol TEXT NOT NULL DEFAULT 'ETH',
+    currency_decimals INTEGER NOT NULL DEFAULT 18,
+    testnet INTEGER NOT NULL DEFAULT 0,
+    enabled INTEGER NOT NULL DEFAULT 0,
+    is_custom INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS health_checks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chain_slug TEXT NOT NULL,
+    status TEXT NOT NULL,
+    latency_ms INTEGER,
+    block_height INTEGER,
+    peer_count INTEGER,
+    error_message TEXT,
+    checked_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_health_checks_slug ON health_checks(chain_slug);
+  CREATE INDEX IF NOT EXISTS idx_health_checks_checked ON health_checks(checked_at);
+`);

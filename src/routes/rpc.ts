@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { getChainBySlug, getEnabledChains } from '../chains';
+import { getChainBySlug, getEnabledChains } from '../services/chainManager';
 import { canAccessNetwork } from '../services/keyManager';
 import { forwardRpcCall, JsonRpcRequest } from '../services/rpcProxy';
 import { logRequest } from '../services/analyticsService';

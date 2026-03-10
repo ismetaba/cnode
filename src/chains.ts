@@ -4,17 +4,17 @@ export interface ChainConfig {
   chainId: number;
   type: 'evm' | 'solana' | 'bitcoin' | 'cosmos';
   rpcUrl: string;
-  rpcAuth?: string; // HTTP Basic auth "user:password" for Bitcoin-style RPC
+  rpcAuth?: string;
   wsUrl?: string;
   explorerUrl?: string;
   nativeCurrency: { name: string; symbol: string; decimals: number };
   testnet: boolean;
   enabled: boolean;
+  isCustom?: boolean;
 }
 
-// Chain registry — add new chains here, gateway picks them up automatically.
-// rpcUrl points to your own node or an upstream provider.
-export const chains: ChainConfig[] = [
+// Chain catalog — default chain definitions. Runtime state managed by chainManager.
+export const catalogChains: ChainConfig[] = [
   // ── Ethereum ──────────────────────────────────────────
   {
     slug: 'ethereum',
@@ -432,25 +432,3 @@ export const chains: ChainConfig[] = [
   },
 ];
 
-// Build lookup maps for fast access
-const slugMap = new Map<string, ChainConfig>();
-const chainIdMap = new Map<number, ChainConfig[]>();
-
-for (const chain of chains) {
-  slugMap.set(chain.slug, chain);
-  const existing = chainIdMap.get(chain.chainId) || [];
-  existing.push(chain);
-  chainIdMap.set(chain.chainId, existing);
-}
-
-export function getChainBySlug(slug: string): ChainConfig | undefined {
-  return slugMap.get(slug);
-}
-
-export function getEnabledChains(): ChainConfig[] {
-  return chains.filter((c) => c.enabled);
-}
-
-export function getAllChains(): ChainConfig[] {
-  return chains;
-}

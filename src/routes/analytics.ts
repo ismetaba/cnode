@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { config } from '../config';
+import { requireRole } from '../middleware/roleAuth';
 import {
   getOverview,
   getTopMethods,
@@ -8,16 +8,7 @@ import {
 } from '../services/analyticsService';
 
 export async function analyticsRoutes(app: FastifyInstance): Promise<void> {
-  // Admin auth for analytics
-  app.addHook('preHandler', async (request, reply) => {
-    const secret = request.headers['x-admin-secret'] as string | undefined;
-    if (secret !== config.adminSecret) {
-      reply.status(401).send({
-        error: 'Unauthorized',
-        message: 'Invalid or missing X-Admin-Secret header',
-      });
-    }
-  });
+  app.addHook('preHandler', requireRole('consumer', 'operator'));
 
   app.get<{ Querystring: { period?: string } }>(
     '/api/analytics/overview',
