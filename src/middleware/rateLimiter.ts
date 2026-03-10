@@ -1,26 +1,9 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import Redis from 'ioredis';
-import { config } from '../config';
+import { getRedis, isRedisAvailable } from '../services/redisClient';
 import { incrementAndCheckQuota } from '../services/workspaceManager';
-
-let redis: Redis | null = null;
 
 // In-memory fallback when Redis is unavailable
 const memoryStore = new Map<string, { count: number; resetAt: number }>();
-
-try {
-  redis = new Redis(config.redisUrl, {
-    maxRetriesPerRequest: 1,
-    lazyConnect: true,
-    retryStrategy: () => null, // Don't retry, fall back to memory
-  });
-  redis.connect().catch(() => {
-    console.warn('Redis unavailable, using in-memory rate limiting');
-    redis = null;
-  });
-} catch {
-  console.warn('Redis unavailable, using in-memory rate limiting');
-}
 
 async function checkRateLimit(
   key: string,
@@ -30,23 +13,28 @@ async function checkRateLimit(
   const now = Date.now();
   const windowMs = windowSec * 1000;
 
-  if (redis) {
-    const redisKey = `rl:${key}`;
-    const multi = redis.multi();
-    multi.incr(redisKey);
-    multi.pttl(redisKey);
-    const results = await multi.exec();
+  const redis = getRedis();
+  if (redis && isRedisAvailable()) {
+    try {
+      const redisKey = `rl:${key}`;
+      const multi = redis.multi();
+      multi.incr(redisKey);
+      multi.pttl(redisKey);
+      const results = await multi.exec();
 
-    const count = (results?.[0]?.[1] as number) || 0;
-    const ttl = (results?.[1]?.[1] as number) || -1;
+      const count = (results?.[0]?.[1] as number) || 0;
+      const ttl = (results?.[1]?.[1] as number) || -1;
 
-    if (ttl < 0) {
-      await redis.pexpire(redisKey, windowMs);
+      if (ttl < 0) {
+        await redis.pexpire(redisKey, windowMs);
+      }
+
+      const remaining = Math.max(0, limit - count);
+      const resetAt = now + (ttl > 0 ? ttl : windowMs);
+      return { allowed: count <= limit, remaining, resetAt };
+    } catch {
+      // Fall through to in-memory on Redis error
     }
-
-    const remaining = Math.max(0, limit - count);
-    const resetAt = now + (ttl > 0 ? ttl : windowMs);
-    return { allowed: count <= limit, remaining, resetAt };
   }
 
   // In-memory fallback
@@ -98,9 +86,8 @@ export async function rateLimiter(
   reply: FastifyReply
 ): Promise<void> {
   const apiKey = request.apiKey;
-  if (!apiKey) return; // Auth middleware should have rejected already
+  if (!apiKey) return;
 
-  // Guard against misconfigured keys with invalid rate limits
   const limit = apiKey.rate_limit > 0 ? apiKey.rate_limit : 1;
 
   const { allowed, remaining, resetAt } = await checkRateLimit(

@@ -10,7 +10,7 @@ export default function ChainManagement() {
     slug: '', name: '', chainId: 0, type: 'evm' as string,
     rpcUrl: '', rpcAuth: '', wsUrl: '', explorerUrl: '',
     currencyName: 'Ether', currencySymbol: 'ETH', currencyDecimals: 18,
-    testnet: false, enabled: false,
+    testnet: false, enabled: false, cacheEnabled: true,
   });
 
   const load = () => getOperatorChains().then((r) => setChains(r.chains)).catch(() => {});
@@ -26,7 +26,7 @@ export default function ChainManagement() {
       slug: '', name: '', chainId: 0, type: 'evm',
       rpcUrl: '', rpcAuth: '', wsUrl: '', explorerUrl: '',
       currencyName: 'Ether', currencySymbol: 'ETH', currencyDecimals: 18,
-      testnet: false, enabled: false,
+      testnet: false, enabled: false, cacheEnabled: true,
     });
     setShowAdd(false);
     setEditSlug(null);
@@ -42,6 +42,7 @@ export default function ChainManagement() {
       currencyName: c.nativeCurrency.name, currencySymbol: c.nativeCurrency.symbol,
       currencyDecimals: c.nativeCurrency.decimals,
       testnet: c.testnet, enabled: c.enabled,
+      cacheEnabled: (c as any).cacheEnabled !== false,
     });
   };
 
@@ -66,6 +67,7 @@ export default function ChainManagement() {
       wsUrl: form.wsUrl || undefined,
       explorerUrl: form.explorerUrl || undefined,
       enabled: form.enabled,
+      cacheEnabled: form.cacheEnabled,
     });
     resetForm();
     load();
@@ -153,6 +155,11 @@ export default function ChainManagement() {
                   <input type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
                     className="w-4 h-4 rounded border-[#27272a] bg-[#09090b] accent-violet-500" />
                   Enabled
+                </label>
+                <label className="flex items-center gap-2 text-[12px] text-[#a1a1aa] cursor-pointer">
+                  <input type="checkbox" checked={form.cacheEnabled} onChange={(e) => setForm({ ...form, cacheEnabled: e.target.checked })}
+                    className="w-4 h-4 rounded border-[#27272a] bg-[#09090b] accent-violet-500" />
+                  Cache
                 </label>
                 {!editSlug && (
                   <label className="flex items-center gap-2 text-[12px] text-[#a1a1aa] cursor-pointer">

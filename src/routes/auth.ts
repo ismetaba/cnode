@@ -7,7 +7,8 @@ import {
   updateApiKey,
   permanentlyDeleteKey,
 } from '../services/keyManager';
-import { getKeyUsage } from '../services/analyticsService';
+import { getKeyUsage, getKeyNetworkBreakdown, getWorkspaceUsageByMonth } from '../services/analyticsService';
+import { getSetting } from '../services/settingsManager';
 import {
   createWorkspace,
   getAllWorkspaces,
@@ -28,7 +29,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.post<{
     Body: { name: string; rate_limit?: number; networks?: string; workspace_id?: string };
   }>('/api/keys', async (request, reply) => {
-    const { name, rate_limit = 100, networks = '*', workspace_id = 'ws_default' } = request.body || {};
+    const defaultRl = parseInt(getSetting('default_rate_limit') || '100');
+    const { name, rate_limit = defaultRl, networks = '*', workspace_id = 'ws_default' } = request.body || {};
     if (!name || !name.trim()) {
       return reply.status(400).send({ error: 'name is required' });
     }
@@ -128,7 +130,20 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         | '7d'
         | '30d';
       const usage = getKeyUsage(id, period);
-      return { usage };
+      const networks = getKeyNetworkBreakdown(id, period);
+      return { usage, networks };
+    }
+  );
+
+  // Workspace usage by month (per-chain breakdown)
+  app.get<{ Params: { id: string }; Querystring: { month?: string } }>(
+    '/api/workspaces/:id/usage',
+    async (request, reply) => {
+      const ws = getWorkspaceById(request.params.id);
+      if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+      const month = request.query.month || new Date().toISOString().slice(0, 7);
+      const usage = getWorkspaceUsageByMonth(request.params.id, month);
+      return { usage, workspace: ws, month };
     }
   );
 

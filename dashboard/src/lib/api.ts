@@ -97,6 +97,13 @@ export function createApiKey(name: string, rateLimit: number, networks: string, 
   });
 }
 
+export function updateApiKey(id: string, name: string, rateLimit: number, networks: string) {
+  return apiFetch<{ key: ApiKey }>(`/api/keys/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name, rate_limit: rateLimit, networks }),
+  });
+}
+
 export function deleteApiKey(id: string) {
   return apiFetch<{ ok: boolean }>(`/api/keys/${id}`, { method: 'DELETE' });
 }
@@ -124,25 +131,33 @@ export interface Overview {
   success_rate: number;
 }
 
-export function getOverview(period = '24h') {
-  return apiFetch<Overview>(`/api/analytics/overview?period=${period}`);
+export function getOverview(period = '24h', workspaceId?: string) {
+  const qs = new URLSearchParams({ period });
+  if (workspaceId) qs.set('workspace_id', workspaceId);
+  return apiFetch<Overview>(`/api/analytics/overview?${qs}`);
 }
 
-export function getTopMethods(period = '24h') {
+export function getTopMethods(period = '24h', workspaceId?: string) {
+  const qs = new URLSearchParams({ period });
+  if (workspaceId) qs.set('workspace_id', workspaceId);
   return apiFetch<{ methods: Array<{ method: string; count: number }> }>(
-    `/api/analytics/methods?period=${period}`
+    `/api/analytics/methods?${qs}`
   );
 }
 
-export function getTimeseries(period = '24h') {
+export function getTimeseries(period = '24h', workspaceId?: string) {
+  const qs = new URLSearchParams({ period });
+  if (workspaceId) qs.set('workspace_id', workspaceId);
   return apiFetch<{
     series: Array<{ bucket: string; count: number; avg_latency: number }>;
-  }>(`/api/analytics/timeseries?period=${period}`);
+  }>(`/api/analytics/timeseries?${qs}`);
 }
 
-export function getNetworkBreakdown(period = '24h') {
+export function getNetworkBreakdown(period = '24h', workspaceId?: string) {
+  const qs = new URLSearchParams({ period });
+  if (workspaceId) qs.set('workspace_id', workspaceId);
   return apiFetch<{ networks: Array<{ network: string; count: number }> }>(
-    `/api/analytics/networks?period=${period}`
+    `/api/analytics/networks?${qs}`
   );
 }
 
@@ -235,6 +250,9 @@ export interface SystemInfo {
     external: number;
   };
   dbSizeBytes: number;
+  redisStatus: 'connected' | 'disconnected';
+  rateLimitMode: 'redis' | 'in-memory';
+  cache: { hits: number; misses: number; hitRate: number };
 }
 
 export interface RequestLog {
@@ -305,4 +323,41 @@ export function getRequestLogs(params: { limit?: number; offset?: number; networ
   return apiFetch<{ logs: RequestLog[]; total: number; limit: number; offset: number }>(
     `/api/operator/logs?${qs.toString()}`
   );
+}
+
+// ── Cache ─────────────────────────────────────────────
+
+export function getCacheStats() {
+  return apiFetch<{ hits: number; misses: number; hitRate: number }>('/api/operator/cache/stats');
+}
+
+export function flushCache(chainSlug?: string) {
+  return apiFetch<{ ok: boolean; deleted: number }>('/api/operator/cache/flush', {
+    method: 'POST',
+    body: JSON.stringify({ chain_slug: chainSlug }),
+  });
+}
+
+// ── Settings ──────────────────────────────────────────
+
+export function getSettings() {
+  return apiFetch<{ settings: Record<string, string> }>('/api/operator/settings');
+}
+
+export function updateSetting(key: string, value: string) {
+  return apiFetch<{ ok: boolean }>(`/api/operator/settings/${key}`, {
+    method: 'PUT',
+    body: JSON.stringify({ value }),
+  });
+}
+
+// ── Workspace Usage ───────────────────────────────────
+
+export function getWorkspaceUsage(id: string, month?: string) {
+  const qs = month ? `?month=${month}` : '';
+  return apiFetch<{
+    usage: Array<{ network: string; request_count: number }>;
+    workspace: Workspace;
+    month: string;
+  }>(`/api/workspaces/${id}/usage${qs}`);
 }

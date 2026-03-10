@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { getWorkspaces, createWorkspace, updateWorkspace, deleteWorkspace, reactivateWorkspace, permanentlyDeleteWorkspace } from '../lib/api';
+import { getWorkspaces, createWorkspace, updateWorkspace, deleteWorkspace, reactivateWorkspace, permanentlyDeleteWorkspace, getWorkspaceUsage } from '../lib/api';
 import type { Workspace } from '../lib/api';
 
 export default function WorkspacesPage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [usageData, setUsageData] = useState<Record<string, Array<{ network: string; request_count: number }>>>({});
   const [name, setName] = useState('');
   const [quota, setQuota] = useState(100000);
 
@@ -43,6 +45,22 @@ export default function WorkspacesPage() {
   const handlePermanentDelete = async (id: string) => {
     await permanentlyDeleteWorkspace(id);
     load();
+  };
+
+  const toggleExpand = async (id: string) => {
+    if (expandedId === id) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(id);
+    if (!usageData[id]) {
+      try {
+        const res = await getWorkspaceUsage(id);
+        setUsageData((prev) => ({ ...prev, [id]: res.usage }));
+      } catch {
+        setUsageData((prev) => ({ ...prev, [id]: [] }));
+      }
+    }
   };
 
   const startEdit = (ws: Workspace) => {
@@ -208,6 +226,47 @@ export default function WorkspacesPage() {
                       <p className="text-[15px] font-semibold text-white tabular-nums">{formatNumber(Math.max(0, limit - used))}</p>
                     </div>
                   </div>
+
+                  {/* Expand usage button */}
+                  <button
+                    onClick={() => toggleExpand(ws.id)}
+                    className="w-full flex items-center justify-center gap-1.5 text-[11px] text-[#52525b] hover:text-[#a1a1aa] transition-colors pt-1"
+                  >
+                    <span>{expandedId === ws.id ? 'Hide' : 'Show'} Usage Breakdown</span>
+                    <svg className={`w-3 h-3 transition-transform ${expandedId === ws.id ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                    </svg>
+                  </button>
+
+                  {/* Usage breakdown */}
+                  {expandedId === ws.id && (
+                    <div className="pt-2 space-y-2 animate-fade-in">
+                      {!usageData[ws.id] ? (
+                        <p className="text-[11px] text-[#3f3f46] text-center py-2">Loading...</p>
+                      ) : usageData[ws.id].length === 0 ? (
+                        <p className="text-[11px] text-[#3f3f46] text-center py-2">No usage data yet</p>
+                      ) : (
+                        usageData[ws.id].map((u) => {
+                          const maxCount = Math.max(...usageData[ws.id].map((x) => x.request_count));
+                          const barPct = maxCount > 0 ? (u.request_count / maxCount) * 100 : 0;
+                          return (
+                            <div key={u.network}>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-[11px] text-[#a1a1aa] font-mono">{u.network}</span>
+                                <span className="text-[11px] text-[#52525b] tabular-nums">{u.request_count.toLocaleString()}</span>
+                              </div>
+                              <div className="h-1 bg-[#18181b] rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
+                                  style={{ width: `${barPct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Card footer */}

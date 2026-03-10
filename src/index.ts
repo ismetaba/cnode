@@ -7,6 +7,7 @@ import { roleRoutes } from './routes/role';
 import { operatorRoutes } from './routes/operator';
 import { getEnabledChains, getAllChains } from './services/chainManager';
 import { startHealthChecker } from './services/healthChecker';
+import { initRedis } from './services/redisClient';
 
 const app = Fastify({
   logger: {
@@ -39,6 +40,9 @@ app.get('/health', async () => ({
   enabledChains: getEnabledChains().length,
   totalChains: getAllChains().length,
 }));
+
+// Initialize Redis (shared by rate limiter + cache)
+initRedis();
 
 // Register routes
 app.register(roleRoutes);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getSystemInfo } from '../lib/api';
+import { getSystemInfo, flushCache } from '../lib/api';
 import type { SystemInfo as SystemInfoType } from '../lib/api';
 
 export default function SystemInfo() {
@@ -162,6 +162,55 @@ export default function SystemInfo() {
                 <p className="text-[10px] text-[#52525b] font-medium mb-0.5">Free Memory</p>
                 <p className="text-[15px] font-bold text-white tabular-nums">{formatBytes(info.freeMemory)}</p>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Redis & Cache */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div className="bg-[#0c0c0f] border border-[#1a1a1f] rounded-xl p-5 hover:border-[#27272a] transition-all duration-200">
+          <h3 className="text-[12px] font-semibold text-[#a1a1aa] mb-4">Redis</h3>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-[11px] text-[#71717a]">Status</span>
+              <div className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full ${info.redisStatus === 'connected' ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                <span className={`text-[12px] font-semibold ${info.redisStatus === 'connected' ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {info.redisStatus === 'connected' ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+            </div>
+            <div className="h-px bg-[#1a1a1f]" />
+            <div className="flex justify-between items-center">
+              <span className="text-[11px] text-[#71717a]">Rate Limit Mode</span>
+              <span className="text-[12px] text-[#a1a1aa] font-medium capitalize">{info.rateLimitMode}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-[#0c0c0f] border border-[#1a1a1f] rounded-xl p-5 hover:border-[#27272a] transition-all duration-200">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[12px] font-semibold text-[#a1a1aa]">RPC Cache</h3>
+            <button
+              onClick={() => flushCache().then(() => load())}
+              className="text-[11px] text-[#52525b] hover:text-white px-2 py-1 rounded hover:bg-white/[0.05] transition-all"
+            >
+              Flush All
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-[#111114] rounded-lg px-3.5 py-2.5 border border-[#1a1a1f]">
+              <p className="text-[10px] text-[#52525b] font-medium mb-0.5">Hits</p>
+              <p className="text-[15px] font-bold text-emerald-400 tabular-nums">{info.cache.hits.toLocaleString()}</p>
+            </div>
+            <div className="bg-[#111114] rounded-lg px-3.5 py-2.5 border border-[#1a1a1f]">
+              <p className="text-[10px] text-[#52525b] font-medium mb-0.5">Misses</p>
+              <p className="text-[15px] font-bold text-white tabular-nums">{info.cache.misses.toLocaleString()}</p>
+            </div>
+            <div className="bg-[#111114] rounded-lg px-3.5 py-2.5 border border-[#1a1a1f]">
+              <p className="text-[10px] text-[#52525b] font-medium mb-0.5">Hit Rate</p>
+              <p className="text-[15px] font-bold text-violet-400 tabular-nums">{info.cache.hitRate}%</p>
             </div>
           </div>
         </div>

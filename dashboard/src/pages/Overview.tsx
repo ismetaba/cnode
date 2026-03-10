@@ -18,8 +18,9 @@ import {
   getTimeseries,
   getNetworkBreakdown,
   getHealth,
+  getWorkspaces,
 } from '../lib/api';
-import type { Overview } from '../lib/api';
+import type { Overview, Workspace } from '../lib/api';
 import StatCard from '../components/StatCard';
 
 const COLORS = ['#8b5cf6', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
@@ -35,6 +36,8 @@ const customTooltip = {
 
 export default function OverviewPage() {
   const [period, setPeriod] = useState<Period>('24h');
+  const [workspaceId, setWorkspaceId] = useState<string>('');
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [methods, setMethods] = useState<Array<{ method: string; count: number }>>([]);
   const [series, setSeries] = useState<Array<{ bucket: string; count: number; avg_latency: number }>>([]);
@@ -42,21 +45,25 @@ export default function OverviewPage() {
   const [health, setHealth] = useState<{ uptime: number; enabledChains: number; totalChains: number } | null>(null);
   const [activeTab, setActiveTab] = useState<'requests' | 'latency'>('requests');
 
-  useEffect(() => { getHealth().then(setHealth).catch(() => {}); }, []);
+  useEffect(() => {
+    getHealth().then(setHealth).catch(() => {});
+    getWorkspaces().then((r) => setWorkspaces(r.workspaces)).catch(() => {});
+  }, []);
 
   useEffect(() => {
+    const wsId = workspaceId || undefined;
     Promise.all([
-      getOverview(period),
-      getTopMethods(period),
-      getTimeseries(period),
-      getNetworkBreakdown(period),
+      getOverview(period, wsId),
+      getTopMethods(period, wsId),
+      getTimeseries(period, wsId),
+      getNetworkBreakdown(period, wsId),
     ]).then(([o, m, s, n]) => {
       setOverview(o);
       setMethods(m.methods);
       setSeries(s.series);
       setNetworks(n.networks);
     }).catch(() => {});
-  }, [period]);
+  }, [period, workspaceId]);
 
   const formatUptime = (s: number) => {
     const d = Math.floor(s / 86400);
@@ -68,8 +75,20 @@ export default function OverviewPage() {
 
   return (
     <div>
-      {/* Period selector */}
-      <div className="flex items-center justify-end mb-6">
+      {/* Filters */}
+      <div className="flex items-center justify-end gap-3 mb-6">
+        {workspaces.length > 0 && (
+          <select
+            value={workspaceId}
+            onChange={(e) => setWorkspaceId(e.target.value)}
+            className="px-3 py-1.5 bg-[#111114] border border-[#1f1f23] rounded-lg text-[12px] text-[#a1a1aa] focus:outline-none focus:border-violet-500/40 transition-all appearance-none cursor-pointer"
+          >
+            <option value="">All Workspaces</option>
+            {workspaces.filter((w) => w.active).map((ws) => (
+              <option key={ws.id} value={ws.id}>{ws.name}</option>
+            ))}
+          </select>
+        )}
         <div className="flex bg-[#111114] border border-[#1f1f23] rounded-lg p-0.5">
           {(['1h', '24h', '7d', '30d'] as Period[]).map((p) => (
             <button

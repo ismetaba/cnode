@@ -112,4 +112,32 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_health_checks_slug ON health_checks(chain_slug);
   CREATE INDEX IF NOT EXISTS idx_health_checks_checked ON health_checks(checked_at);
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS workspace_usage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+    network TEXT NOT NULL,
+    month TEXT NOT NULL,
+    request_count INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(workspace_id, network, month)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_workspace_usage_ws_month ON workspace_usage(workspace_id, month);
 `);
+
+// === Migration: Add cache_enabled to chains ===
+const hasCacheEnabledCol = (
+  db
+    .prepare("SELECT COUNT(*) as cnt FROM pragma_table_info('chains') WHERE name = 'cache_enabled'")
+    .get() as { cnt: number }
+).cnt;
+
+if (hasCacheEnabledCol === 0) {
+  db.exec('ALTER TABLE chains ADD COLUMN cache_enabled INTEGER NOT NULL DEFAULT 1');
+}

@@ -16,6 +16,7 @@ interface ChainRow {
   testnet: number;
   enabled: number;
   is_custom: number;
+  cache_enabled: number;
 }
 
 const stmts = {
@@ -24,8 +25,8 @@ const stmts = {
   upsert: db.prepare(`
     INSERT INTO chains (slug, name, chain_id, type, rpc_url, rpc_auth, ws_url,
       explorer_url, currency_name, currency_symbol, currency_decimals,
-      testnet, enabled, is_custom, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      testnet, enabled, is_custom, cache_enabled, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(slug) DO UPDATE SET
       name=excluded.name, chain_id=excluded.chain_id, type=excluded.type,
       rpc_url=excluded.rpc_url, rpc_auth=excluded.rpc_auth, ws_url=excluded.ws_url,
@@ -33,7 +34,8 @@ const stmts = {
       currency_name=excluded.currency_name, currency_symbol=excluded.currency_symbol,
       currency_decimals=excluded.currency_decimals,
       testnet=excluded.testnet, enabled=excluded.enabled,
-      is_custom=excluded.is_custom, updated_at=datetime('now')
+      is_custom=excluded.is_custom, cache_enabled=excluded.cache_enabled,
+      updated_at=datetime('now')
   `),
   setEnabled: db.prepare(
     "UPDATE chains SET enabled = ?, updated_at = datetime('now') WHERE slug = ?"
@@ -63,6 +65,7 @@ function rowToConfig(row: ChainRow): ChainConfig {
     testnet: row.testnet === 1,
     enabled: row.enabled === 1,
     isCustom: row.is_custom === 1,
+    cacheEnabled: row.cache_enabled === 1,
   };
 }
 
@@ -118,7 +121,7 @@ export function toggleChainEnabled(slug: string, enabled: boolean): boolean {
       catalog.rpcUrl, catalog.rpcAuth || null, catalog.wsUrl || null,
       catalog.explorerUrl || null, catalog.nativeCurrency.name,
       catalog.nativeCurrency.symbol, catalog.nativeCurrency.decimals,
-      catalog.testnet ? 1 : 0, enabled ? 1 : 0, 0
+      catalog.testnet ? 1 : 0, enabled ? 1 : 0, 0, 1
     );
   } else {
     stmts.setEnabled.run(enabled ? 1 : 0, slug);
@@ -134,7 +137,7 @@ export function upsertChain(chain: ChainConfig): void {
     chain.explorerUrl || null, chain.nativeCurrency.name,
     chain.nativeCurrency.symbol, chain.nativeCurrency.decimals,
     chain.testnet ? 1 : 0, chain.enabled ? 1 : 0,
-    chain.isCustom ? 1 : 0
+    chain.isCustom ? 1 : 0, chain.cacheEnabled !== false ? 1 : 0
   );
   rebuildChainCache();
 }

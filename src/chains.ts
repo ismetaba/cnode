@@ -11,6 +11,7 @@ export interface ChainConfig {
   testnet: boolean;
   enabled: boolean;
   isCustom?: boolean;
+  cacheEnabled?: boolean;
 }
 
 // Chain catalog — default chain definitions. Runtime state managed by chainManager.

@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
-import { getApiKeys, createApiKey, deleteApiKey, permanentlyDeleteApiKey, getWorkspaces } from '../lib/api';
+import { getApiKeys, createApiKey, updateApiKey, deleteApiKey, permanentlyDeleteApiKey, getWorkspaces, getChains } from '../lib/api';
 import type { ApiKey, Workspace } from '../lib/api';
 
 export default function ApiKeysPage() {
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [availableChains, setAvailableChains] = useState<string[]>([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [rateLimit, setRateLimit] = useState(100);
   const [networks, setNetworks] = useState('*');
+  const [selectedNetworks, setSelectedNetworks] = useState<Set<string>>(new Set());
+  const [allNetworks, setAllNetworks] = useState(true);
   const [workspaceId, setWorkspaceId] = useState('ws_default');
   const [newKey, setNewKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -16,19 +20,62 @@ export default function ApiKeysPage() {
   const load = () => {
     getApiKeys().then((r) => setKeys(r.keys)).catch(() => {});
     getWorkspaces().then((r) => setWorkspaces(r.workspaces)).catch(() => {});
+    getChains().then((r) => setAvailableChains(r.chains.map((c) => c.slug))).catch(() => {});
   };
   useEffect(() => { load(); }, []);
 
+  const getNetworksValue = () => allNetworks ? '*' : Array.from(selectedNetworks).join(',');
+
   const handleCreate = async () => {
     if (!name.trim()) return;
-    const res = await createApiKey(name.trim(), rateLimit, networks, workspaceId);
+    const nets = getNetworksValue();
+    const res = await createApiKey(name.trim(), rateLimit, nets, workspaceId);
     setNewKey(res.key.key);
+    resetForm();
+    load();
+  };
+
+  const startEdit = (k: ApiKey) => {
+    setEditId(k.id);
+    setShowCreate(false);
+    setName(k.name);
+    setRateLimit(k.rate_limit);
+    if (k.networks === '*') {
+      setAllNetworks(true);
+      setSelectedNetworks(new Set());
+    } else {
+      setAllNetworks(false);
+      setSelectedNetworks(new Set(k.networks.split(',').filter(Boolean)));
+    }
+    setNetworks(k.networks);
+  };
+
+  const handleUpdate = async () => {
+    if (!editId || !name.trim()) return;
+    const nets = getNetworksValue();
+    await updateApiKey(editId, name.trim(), rateLimit, nets);
+    resetForm();
+    load();
+  };
+
+  const resetForm = () => {
+    setShowCreate(false);
+    setEditId(null);
     setName('');
     setRateLimit(100);
     setNetworks('*');
+    setAllNetworks(true);
+    setSelectedNetworks(new Set());
     setWorkspaceId('ws_default');
-    setShowCreate(false);
-    load();
+  };
+
+  const toggleNetwork = (slug: string) => {
+    setSelectedNetworks((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
   };
 
   const handleRevoke = async (id: string) => {
@@ -63,7 +110,7 @@ export default function ApiKeysPage() {
       <div className="flex items-center justify-between mb-6">
         <p className="text-[13px] text-[#71717a]">{keys.length} API key{keys.length !== 1 ? 's' : ''}</p>
         <button
-          onClick={() => { setShowCreate(!showCreate); setNewKey(null); }}
+          onClick={() => { setShowCreate(!showCreate); setEditId(null); setNewKey(null); setAllNetworks(true); setSelectedNetworks(new Set()); }}
           className="flex items-center gap-2 px-4 py-2 bg-white text-black text-[13px] font-medium rounded-lg hover:bg-[#e4e4e7] transition-all duration-200 shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -100,11 +147,13 @@ export default function ApiKeysPage() {
         </div>
       )}
 
-      {/* Create form */}
-      {showCreate && (
+      {/* Create / Edit form */}
+      {(showCreate || editId) && (
         <div className="mb-6 border border-[#1a1a1f] rounded-xl overflow-hidden bg-[#0c0c0f] animate-fade-in">
           <div className="px-5 h-12 flex items-center border-b border-[#1a1a1f]">
-            <h3 className="text-[12px] font-semibold text-[#a1a1aa]">New API Key</h3>
+            <h3 className="text-[12px] font-semibold text-[#a1a1aa]">
+              {editId ? 'Edit API Key' : 'New API Key'}
+            </h3>
           </div>
           <div className="p-5">
             <div className="space-y-4">
@@ -119,20 +168,20 @@ export default function ApiKeysPage() {
                     autoFocus
                   />
                 </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-[#71717a] mb-1.5">Workspace</label>
-                  <select
-                    value={workspaceId}
-                    onChange={(e) => setWorkspaceId(e.target.value)}
-                    className={selectClass}
-                  >
-                    {workspaces.filter((w) => w.active).map((ws) => (
-                      <option key={ws.id} value={ws.id}>{ws.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+                {!editId && (
+                  <div>
+                    <label className="block text-[11px] font-medium text-[#71717a] mb-1.5">Workspace</label>
+                    <select
+                      value={workspaceId}
+                      onChange={(e) => setWorkspaceId(e.target.value)}
+                      className={selectClass}
+                    >
+                      {workspaces.filter((w) => w.active).map((ws) => (
+                        <option key={ws.id} value={ws.id}>{ws.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="block text-[11px] font-medium text-[#71717a] mb-1.5">Rate Limit (req/s)</label>
                   <input
@@ -142,26 +191,52 @@ export default function ApiKeysPage() {
                     className={inputClass}
                   />
                 </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-[#71717a] mb-1.5">Allowed Networks</label>
-                  <input
-                    value={networks}
-                    onChange={(e) => setNetworks(e.target.value)}
-                    placeholder="* for all, or ethereum,polygon"
-                    className={inputClass}
-                  />
+              </div>
+              {/* Network multi-select */}
+              <div>
+                <label className="block text-[11px] font-medium text-[#71717a] mb-1.5">Allowed Networks</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => { setAllNetworks(true); setSelectedNetworks(new Set()); }}
+                    className={`px-3 py-1.5 text-[11px] font-medium rounded-lg border transition-all ${
+                      allNetworks
+                        ? 'bg-violet-500/10 text-violet-400 border-violet-500/30'
+                        : 'bg-[#111114] text-[#52525b] border-[#1f1f23] hover:text-[#a1a1aa]'
+                    }`}
+                  >
+                    All Networks
+                  </button>
+                  {availableChains.map((slug) => (
+                    <button
+                      key={slug}
+                      onClick={() => {
+                        setAllNetworks(false);
+                        toggleNetwork(slug);
+                      }}
+                      className={`px-3 py-1.5 text-[11px] font-medium rounded-lg border transition-all ${
+                        !allNetworks && selectedNetworks.has(slug)
+                          ? 'bg-violet-500/10 text-violet-400 border-violet-500/30'
+                          : 'bg-[#111114] text-[#52525b] border-[#1f1f23] hover:text-[#a1a1aa]'
+                      }`}
+                    >
+                      {slug}
+                    </button>
+                  ))}
                 </div>
+                {!allNetworks && selectedNetworks.size === 0 && (
+                  <p className="text-[10px] text-amber-400 mt-1">Select at least one network</p>
+                )}
               </div>
               <div className="flex gap-3 pt-2">
                 <button
-                  onClick={handleCreate}
-                  disabled={!name.trim()}
+                  onClick={editId ? handleUpdate : handleCreate}
+                  disabled={!name.trim() || (!allNetworks && selectedNetworks.size === 0)}
                   className="px-5 py-2 bg-white hover:bg-[#e4e4e7] disabled:opacity-30 disabled:cursor-not-allowed text-black text-[13px] font-medium rounded-lg transition-colors"
                 >
-                  Generate Key
+                  {editId ? 'Save Changes' : 'Generate Key'}
                 </button>
                 <button
-                  onClick={() => setShowCreate(false)}
+                  onClick={resetForm}
                   className="px-5 py-2 bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] text-[13px] font-medium rounded-lg transition-colors border border-[#27272a]"
                 >
                   Cancel
@@ -230,21 +305,31 @@ export default function ApiKeysPage() {
                     </div>
                   </td>
                   <td className="px-5 py-4 text-right">
-                    {k.active ? (
-                      <button
-                        onClick={() => handleRevoke(k.id)}
-                        className="text-[12px] text-[#52525b] hover:text-red-400 transition-colors"
-                      >
-                        Revoke
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handlePermanentDelete(k.id)}
-                        className="text-[12px] text-red-500/60 hover:text-red-400 transition-colors"
-                      >
-                        Delete
-                      </button>
-                    )}
+                    <div className="flex items-center justify-end gap-3">
+                      {k.active && (
+                        <button
+                          onClick={() => startEdit(k)}
+                          className="text-[12px] text-[#52525b] hover:text-[#a1a1aa] transition-colors"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {k.active ? (
+                        <button
+                          onClick={() => handleRevoke(k.id)}
+                          className="text-[12px] text-[#52525b] hover:text-red-400 transition-colors"
+                        >
+                          Revoke
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handlePermanentDelete(k.id)}
+                          className="text-[12px] text-red-500/60 hover:text-red-400 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))

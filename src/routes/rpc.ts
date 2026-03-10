@@ -5,6 +5,7 @@ import { forwardRpcCall, JsonRpcRequest } from '../services/rpcProxy';
 import { logRequest } from '../services/analyticsService';
 import { apiKeyAuth } from '../middleware/apiKeyAuth';
 import { workspaceQuotaCheck, rateLimiter } from '../middleware/rateLimiter';
+import { getCached, setCached, recordMiss } from '../services/rpcCache';
 
 export async function rpcRoutes(app: FastifyInstance): Promise<void> {
   // List available chains
@@ -58,31 +59,50 @@ export async function rpcRoutes(app: FastifyInstance): Promise<void> {
         }
       }
 
+      // Cache check for single requests
+      const isBatch = Array.isArray(body);
+      if (!isBatch && chain.cacheEnabled !== false) {
+        const cached = await getCached(network, body);
+        if (cached) {
+          logRequest(request.apiKey.id, request.workspace.id, network, body.method, 200, 0);
+          reply.header('X-Cache', 'HIT');
+          reply.header('X-Response-Time', '0ms');
+          return cached;
+        }
+        recordMiss();
+      }
+
       try {
         const { response, latencyMs } = await forwardRpcCall(chain, body);
 
-        // Log each method (async, non-blocking)
-        const primaryMethod = Array.isArray(body) ? 'batch' : body.method;
+        const primaryMethod = isBatch ? 'batch' : body.method;
         const hasError = Array.isArray(response)
           ? response.some((r) => r.error)
           : !!response.error;
 
         logRequest(
           request.apiKey.id,
+          request.workspace.id,
           network,
           primaryMethod,
           hasError ? 502 : 200,
           latencyMs
         );
 
+        // Cache the response for single requests
+        if (!isBatch && chain.cacheEnabled !== false && !Array.isArray(response)) {
+          setCached(network, body, response); // fire and forget
+        }
+
+        reply.header('X-Cache', 'MISS');
         reply.header('X-Response-Time', `${latencyMs}ms`);
         return response;
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Unknown upstream error';
-        const primaryMethod = Array.isArray(body) ? 'batch' : body.method;
+        const primaryMethod = isBatch ? 'batch' : body.method;
 
-        logRequest(request.apiKey.id, network, primaryMethod, 502, 0);
+        logRequest(request.apiKey.id, request.workspace.id, network, primaryMethod, 502, 0);
 
         return reply.status(502).send({
           error: 'Upstream node error',

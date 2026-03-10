@@ -15,6 +15,9 @@ import {
   runHealthChecks,
 } from '../services/healthChecker';
 import { db } from '../db/client';
+import { isRedisAvailable } from '../services/redisClient';
+import { getCacheStats, flushCache } from '../services/rpcCache';
+import { getAllSettings, getSetting, setSetting } from '../services/settingsManager';
 
 export async function operatorRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireRole('operator'));
@@ -168,8 +171,45 @@ export async function operatorRoutes(app: FastifyInstance): Promise<void> {
         external: mem.external,
       },
       dbSizeBytes,
+      redisStatus: isRedisAvailable() ? 'connected' : 'disconnected',
+      rateLimitMode: isRedisAvailable() ? 'redis' : 'in-memory',
+      cache: getCacheStats(),
     };
   });
+
+  // ── Settings ────────────────────────────────────────────
+
+  app.get('/api/operator/settings', async () => {
+    return { settings: getAllSettings() };
+  });
+
+  app.put<{ Params: { key: string }; Body: { value: string } }>(
+    '/api/operator/settings/:key',
+    async (request, reply) => {
+      const { key } = request.params;
+      const { value } = request.body || {};
+      if (typeof value !== 'string') {
+        return reply.status(400).send({ error: 'value must be a string' });
+      }
+      setSetting(key, value);
+      return { ok: true, key, value };
+    }
+  );
+
+  // ── Cache ───────────────────────────────────────────────
+
+  app.get('/api/operator/cache/stats', async () => {
+    return getCacheStats();
+  });
+
+  app.post<{ Body: { chain_slug?: string } }>(
+    '/api/operator/cache/flush',
+    async (request) => {
+      const chainSlug = request.body?.chain_slug;
+      const deleted = await flushCache(chainSlug || undefined);
+      return { ok: true, deleted };
+    }
+  );
 
   // ── Request Logs ──────────────────────────────────────
 
