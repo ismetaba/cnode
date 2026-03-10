@@ -21,9 +21,14 @@ export async function forwardRpcCall(
 ): Promise<{ response: JsonRpcResponse | JsonRpcResponse[]; latencyMs: number }> {
   const start = performance.now();
 
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (chain.rpcAuth) {
+    headers['Authorization'] = 'Basic ' + Buffer.from(chain.rpcAuth).toString('base64');
+  }
+
   const { statusCode, body: responseBody } = await request(chain.rpcUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(body),
   });
 

@@ -4,6 +4,7 @@ export interface ChainConfig {
   chainId: number;
   type: 'evm' | 'solana' | 'bitcoin' | 'cosmos';
   rpcUrl: string;
+  rpcAuth?: string; // HTTP Basic auth "user:password" for Bitcoin-style RPC
   wsUrl?: string;
   explorerUrl?: string;
   nativeCurrency: { name: string; symbol: string; decimals: number };
@@ -403,6 +404,19 @@ export const chains: ChainConfig[] = [
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     testnet: false,
     enabled: false,
+  },
+  // ── Bitcoin ──────────────────────────────────────────
+  {
+    slug: 'bitcoin-testnet4',
+    name: 'Bitcoin Testnet4',
+    chainId: 0,
+    type: 'bitcoin',
+    rpcUrl: process.env.RPC_BITCOIN_TESTNET4 || 'http://127.0.0.1:48332',
+    rpcAuth: process.env.RPC_AUTH_BITCOIN_TESTNET4 || 'cnode:cnode123',
+    explorerUrl: 'https://mempool.space/testnet4',
+    nativeCurrency: { name: 'Bitcoin', symbol: 'tBTC', decimals: 8 },
+    testnet: true,
+    enabled: true,
   },
   // ── Starknet ──────────────────────────────────────────
   {
